@@ -1,6 +1,8 @@
 let skins = [], faces = [], hairs = [], shirts = [], pants = [], shoes = [], hats = [];
-let sparkles = [], confetti = [];
+let sparkles = [], confetti = [], menuStars = [];
 
+// NEW: Start State for GitHub Compatibility
+let isStarted = false; 
 let isIntro = true;
 let isInstructions = false;
 let instructionsSpoken = false;
@@ -51,7 +53,7 @@ function preload() {
   for (let i = 0; i <= 9; i++) shirts.push(loadImage('assets/shirt' + i + '.png'));
   for (let i = 0; i <= 1; i++) pants.push(loadImage('assets/pants' + i + '.png'));
   for (let i = 0; i <= 4; i++) shoes.push(loadImage('assets/shoes' + i + '.png'));
-  for (let i = 0; i <= 5; i++) hats.push(loadImage('assets/hat' + i + '.png'));
+  for (let i = 0; i <= 6; i++) hats.push(loadImage('assets/hat' + i + '.png'));
 }
 
 function setup() {
@@ -59,6 +61,11 @@ function setup() {
   pixelDensity(displayDensity()); 
   imageMode(CENTER);
   textAlign(CENTER, CENTER);
+
+  // Background Menu Stars
+  for(let i = 0; i < 30; i++) {
+    menuStars.push({ x: random(width), y: random(height), s: random(2, 5), o: random(TWO_PI) });
+  }
 
   env = new p5.Envelope();
   env.setADSR(0.01, 0.1, 0.2, 0.1);
@@ -85,7 +92,6 @@ function setup() {
 
   startBtn = createButton('START GAME');
   startBtn.mousePressed(() => { 
-    userStartAudio();
     playSelectSound();
     isInstructions = false;
     startBtn.hide();
@@ -95,10 +101,7 @@ function setup() {
   });
 
   repositionUI(); 
-  nextBtn.hide();
-  selectBtn.hide();
-  resetBtn.hide();
-  startBtn.hide();
+  hideAllUI();
 }
 
 function windowResized() {
@@ -113,14 +116,61 @@ function repositionUI() {
   styleButton(startBtn, width / 2 - 80, height / 2 + 100);
 }
 
+function hideAllUI() {
+  nextBtn.hide();
+  selectBtn.hide();
+  resetBtn.hide();
+  startBtn.hide();
+}
+
+// THE HANDSHAKE: Unlocks Audio/Speech for GitHub Pages
+function mousePressed() {
+  if (!isStarted) {
+    userStartAudio();
+    let wakeUp = new SpeechSynthesisUtterance("");
+    window.speechSynthesis.speak(wakeUp);
+    isStarted = true;
+    return false;
+  }
+}
+
 function draw() {
-  if (isIntro) {
+  if (!isStarted) {
+    drawTapToStart();
+  } else if (isIntro) {
     runIntroAnimation();
   } else if (isInstructions) {
     drawInstructions();
   } else {
     gameLoop();
   }
+}
+
+function drawTapToStart() {
+  setGradient(0, 0, width, height, color(45, 20, 80), color(20, 60, 100));
+  
+  noStroke();
+  fill(255, 150);
+  for(let s of menuStars) {
+    s.y -= 0.5;
+    if(s.y < -10) s.y = height + 10;
+    let xOff = sin(frameCount * 0.02 + s.o) * 20;
+    ellipse(s.x + xOff, s.y, s.s);
+  }
+
+  fill(255);
+  textFont(PLAYFUL_FONT);
+  textSize(min(width * 0.1, 70));
+  drawingContext.shadowBlur = 15;
+  drawingContext.shadowColor = 'white';
+  text("Dress Up Game", width / 2, height / 2 - 20);
+  
+  drawingContext.shadowBlur = 0;
+  let pulse = sin(frameCount * 0.1) * 20;
+  textSize(24);
+  textFont(UI_FONT);
+  fill(255, 180 + pulse);
+  text("Tap to Start", width / 2, height / 2 + 80);
 }
 
 function runIntroAnimation() {
@@ -168,7 +218,7 @@ function drawInstructions() {
   handleSparkles();
 
   if (!instructionsSpoken) {
-    speakDescription("How to play. Click Next to cycle through styles. Click Select to make your choice. Go through all categories to see your final look! Press the start button when you are ready.");
+    speakDescription("How to play. Click Next to cycle through styles. Click Select to make your choice. Go through all categories to see your final look!");
     instructionsSpoken = true;
   }
 
@@ -216,15 +266,9 @@ function drawAvatar() {
 
   const renderImg = (img, cat, tintCol, isSkin = false, indexVal = -1) => {
     if (!img) return;
-    
-
-    if (isSkin && indexVal === 3) {
-      tint(255, 255); 
-    } else if (tintCol) {
-      tint(tintCol);
-    } else {
-      noTint();
-    }
+    if (isSkin && indexVal === 3) tint(255, 255); 
+    else if (tintCol) tint(tintCol); 
+    else noTint();
 
     if (currentCategory === cat && tempIndex !== -1) {
       drawingContext.shadowBlur = 30; 
@@ -238,20 +282,16 @@ function drawAvatar() {
 
   let skinIdx = currentCategory === "Skin Tones" && tempIndex !== -1 ? tempIndex : selectedSkin;
   renderImg(skins[skinIdx], "Skin Tones", null, true, skinIdx);
-  
   renderImg((currentCategory === "Facial Expressions" && tempIndex !== -1) ? faces[tempIndex] : faces[selectedFace], "Facial Expressions");
   renderImg((currentCategory === "Shoes" && tempIndex !== -1) ? shoes[tempIndex] : shoes[selectedShoes], "Shoes");
 
   let pIdx, cIdx;
   if (currentCategory === "Pants and Skirts" && tempIndex !== -1) {
-    pIdx = tempIndex >= 3 ? 1 : 0; 
-    cIdx = tempIndex % 3;
+    pIdx = tempIndex >= 3 ? 1 : 0; cIdx = tempIndex % 3;
   } else {
-    pIdx = selectedPantsImg; 
-    cIdx = selectedPantsCol;
+    pIdx = selectedPantsImg; cIdx = selectedPantsCol;
   }
   renderImg(pants[pIdx], "Pants and Skirts", pantsColors[cIdx]);
-
   renderImg((currentCategory === "Shirts" && tempIndex !== -1) ? shirts[tempIndex] : shirts[selectedShirt], "Shirts");
 
   let hImg = (currentCategory === "Hairstyles" && tempIndex !== -1) ? hairs[tempIndex] : hairs[selectedHair];
@@ -357,15 +397,13 @@ function drawFinal() {
   if (faces[selectedFace]) image(faces[selectedFace], 0, 0, IMG_W, IMG_H);
   if (shoes[selectedShoes]) image(shoes[selectedShoes], 0, 0, IMG_W, IMG_H);
   
-  push(); 
-  tint(pantsColors[selectedPantsCol]); 
+  push(); tint(pantsColors[selectedPantsCol]); 
   if (pants[selectedPantsImg]) image(pants[selectedPantsImg], 0, 0, IMG_W, IMG_H); 
   pop();
 
   if (shirts[selectedShirt]) image(shirts[selectedShirt], 0, 0, IMG_W, IMG_H);
   
-  push(); 
-  tint(hairColors[selectedHairColor]); 
+  push(); tint(hairColors[selectedHairColor]); 
   if (hairs[selectedHair]) image(hairs[selectedHair], 0, 0, IMG_W, IMG_H); 
   pop();
 
@@ -397,15 +435,11 @@ function selectOption() {
   else if (currentCategory === "Hair Colors") { selectedHairColor = selection; currentCategory = "Shirts"; }
   else if (currentCategory === "Shirts") { selectedShirt = selection; currentCategory = "Pants and Skirts"; }
   else if (currentCategory === "Pants and Skirts") { 
-    selectedPantsImg = selection >= 3 ? 1 : 0; 
-    selectedPantsCol = selection % 3; 
-    currentCategory = "Shoes"; 
+    selectedPantsImg = selection >= 3 ? 1 : 0; selectedPantsCol = selection % 3; currentCategory = "Shoes"; 
   }
   else if (currentCategory === "Shoes") { selectedShoes = selection; currentCategory = "Hats"; }
   else if (currentCategory === "Hats") { 
-    selectedHat = selection - 1; 
-    showFinal = true; 
-    triggerConfetti(); 
+    selectedHat = selection - 1; showFinal = true; triggerConfetti(); 
     speakDescription("Wow, that's so stylish! What a great outfit!");
   }
 
@@ -452,9 +486,7 @@ function getCategoryDefault() {
 }
 
 function resetGame() {
-  resetBtn.hide(); 
-  nextBtn.hide();
-  selectBtn.hide();
+  hideAllUI();
   isIntro = true;
   isInstructions = false;
   instructionsSpoken = false;
