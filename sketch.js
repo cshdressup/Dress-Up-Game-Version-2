@@ -1,8 +1,9 @@
 let skins = [], faces = [], hairs = [], shirts = [], pants = [], shoes = [], hats = [];
-let sparkles = [], confetti = [], menuStars = [];
+let sparkles = [], confetti = [];
+let menuStars = [];
 
-// NEW: Start State for GitHub Compatibility
-let isStarted = false; 
+// State Management
+let isStarted = false; // GitHub/Browser compatibility layer
 let isIntro = true;
 let isInstructions = false;
 let instructionsSpoken = false;
@@ -15,19 +16,18 @@ let jinglePlayed = false;
 
 let nextBtn, selectBtn, resetBtn, startBtn;
 
+// Data Arrays
 let skinNames = ["Dark Skin Tone", "Medium Skin Tone 1", "Medium Skin Tone 2", "Light Skin Tone"];
 let faceNames = ["Smiley Face", "Silly Face", "Neutral Face", "Confused Face"];
 let hairNames = ["Short Straight Hair", "Short Wavy Hair", "Short Curly Hair", "Long Wavy Hair", "Long Straight Hair", "Long Curly Hair", "Long Box Braids", "Long Straight Ponytail"];
 let hairColorNames = ["Black", "Dark Brown", "Light Brown", "Blonde", "Red"];
 let shirtNames = ["Blue Tee", "Black Tee with Bow", "Green Sweater", "Red Tank", "Purple Tank", "Pink Tee with Bow", "Yellow Sweater", "Grey Striped Tee", "Green Tank", "Pink Tee with Heart"];
-
 let pantsNames = ["Black Pants", "Blue Jeans", "White Pants", "Black Skirt", "Blue Denim Skirt", "White Skirt"];
-let pantsColors = ["#494949", "#7c95bd", "#f1f1f1"]; 
-
 let shoeNames = ["Red Sneakers", "Black Boots", "Pink Sneakers", "Brown Cowboy Boots", "Black Flats"];
 let hatNames = ["No Hat", "Sunglasses", "Round Glasses", "Black Baseball Cap", "Gold Tiara", "Pink Bow", "Blue Headband"];
 
 let hairColors = ["#221006", "#6a3a17", "#c47c31", "#ffd699", "#d07623"];
+let pantsColors = ["#494949", "#7c95bd", "#f1f1f1"]; 
 
 let currentCategory = "Skin Tones", tempIndex = -1, appearanceScale = 1.0; 
 let selectedSkin = 3, selectedFace = 0, selectedHair = 2, selectedHairColor = 1;      
@@ -67,6 +67,7 @@ function setup() {
     menuStars.push({ x: random(width), y: random(height), s: random(2, 5), o: random(TWO_PI) });
   }
 
+  // Audio Setup
   env = new p5.Envelope();
   env.setADSR(0.01, 0.1, 0.2, 0.1);
   env.setRange(0.5, 0);
@@ -81,6 +82,7 @@ function setup() {
   nextOsc.start();
   nextOsc.amp(0);
 
+  // Button UI
   nextBtn = createButton('NEXT ❯');
   nextBtn.mousePressed(() => { playNextSound(); cycleOptions(); });
   
@@ -101,7 +103,7 @@ function setup() {
   });
 
   repositionUI(); 
-  hideAllUI();
+  hideAllGameUI();
 }
 
 function windowResized() {
@@ -116,17 +118,17 @@ function repositionUI() {
   styleButton(startBtn, width / 2 - 80, height / 2 + 100);
 }
 
-function hideAllUI() {
+function hideAllGameUI() {
   nextBtn.hide();
   selectBtn.hide();
   resetBtn.hide();
   startBtn.hide();
 }
 
-// THE HANDSHAKE: Unlocks Audio/Speech for GitHub Pages
 function mousePressed() {
+  // Required for Browsers/GitHub to enable sound and voice
   if (!isStarted) {
-    userStartAudio();
+    if (typeof userStartAudio === 'function') userStartAudio();
     let wakeUp = new SpeechSynthesisUtterance("");
     window.speechSynthesis.speak(wakeUp);
     isStarted = true;
@@ -148,7 +150,6 @@ function draw() {
 
 function drawTapToStart() {
   setGradient(0, 0, width, height, color(45, 20, 80), color(20, 60, 100));
-  
   noStroke();
   fill(255, 150);
   for(let s of menuStars) {
@@ -266,9 +267,7 @@ function drawAvatar() {
 
   const renderImg = (img, cat, tintCol, isSkin = false, indexVal = -1) => {
     if (!img) return;
-    if (isSkin && indexVal === 3) tint(255, 255); 
-    else if (tintCol) tint(tintCol); 
-    else noTint();
+    if (isSkin && indexVal === 3) tint(255, 255); else if (tintCol) tint(tintCol); else noTint();
 
     if (currentCategory === cat && tempIndex !== -1) {
       drawingContext.shadowBlur = 30; 
@@ -287,9 +286,11 @@ function drawAvatar() {
 
   let pIdx, cIdx;
   if (currentCategory === "Pants and Skirts" && tempIndex !== -1) {
-    pIdx = tempIndex >= 3 ? 1 : 0; cIdx = tempIndex % 3;
+    pIdx = tempIndex >= 3 ? 1 : 0; 
+    cIdx = tempIndex % 3;
   } else {
-    pIdx = selectedPantsImg; cIdx = selectedPantsCol;
+    pIdx = selectedPantsImg; 
+    cIdx = selectedPantsCol;
   }
   renderImg(pants[pIdx], "Pants and Skirts", pantsColors[cIdx]);
   renderImg((currentCategory === "Shirts" && tempIndex !== -1) ? shirts[tempIndex] : shirts[selectedShirt], "Shirts");
@@ -299,7 +300,7 @@ function drawAvatar() {
   renderImg(hImg, (currentCategory === "Hairstyles" || currentCategory === "Hair Colors" ? currentCategory : ""), hCol);
 
   let hatIdx = (currentCategory === "Hats" && tempIndex !== -1) ? tempIndex - 1 : selectedHat;
-  if (hatIdx >= 0) renderImg(hats[hatIdx], "Hats");
+  if (hatIdx >= 0 && hats[hatIdx]) renderImg(hats[hatIdx], "Hats");
   pop();
 }
 
@@ -397,13 +398,15 @@ function drawFinal() {
   if (faces[selectedFace]) image(faces[selectedFace], 0, 0, IMG_W, IMG_H);
   if (shoes[selectedShoes]) image(shoes[selectedShoes], 0, 0, IMG_W, IMG_H);
   
-  push(); tint(pantsColors[selectedPantsCol]); 
+  push(); 
+  tint(pantsColors[selectedPantsCol]); 
   if (pants[selectedPantsImg]) image(pants[selectedPantsImg], 0, 0, IMG_W, IMG_H); 
   pop();
 
   if (shirts[selectedShirt]) image(shirts[selectedShirt], 0, 0, IMG_W, IMG_H);
   
-  push(); tint(hairColors[selectedHairColor]); 
+  push(); 
+  tint(hairColors[selectedHairColor]); 
   if (hairs[selectedHair]) image(hairs[selectedHair], 0, 0, IMG_W, IMG_H); 
   pop();
 
@@ -435,11 +438,15 @@ function selectOption() {
   else if (currentCategory === "Hair Colors") { selectedHairColor = selection; currentCategory = "Shirts"; }
   else if (currentCategory === "Shirts") { selectedShirt = selection; currentCategory = "Pants and Skirts"; }
   else if (currentCategory === "Pants and Skirts") { 
-    selectedPantsImg = selection >= 3 ? 1 : 0; selectedPantsCol = selection % 3; currentCategory = "Shoes"; 
+    selectedPantsImg = selection >= 3 ? 1 : 0; 
+    selectedPantsCol = selection % 3; 
+    currentCategory = "Shoes"; 
   }
   else if (currentCategory === "Shoes") { selectedShoes = selection; currentCategory = "Hats"; }
   else if (currentCategory === "Hats") { 
-    selectedHat = selection - 1; showFinal = true; triggerConfetti(); 
+    selectedHat = selection - 1; 
+    showFinal = true; 
+    triggerConfetti(); 
     speakDescription("Wow, that's so stylish! What a great outfit!");
   }
 
@@ -486,7 +493,7 @@ function getCategoryDefault() {
 }
 
 function resetGame() {
-  hideAllUI();
+  hideAllGameUI();
   isIntro = true;
   isInstructions = false;
   instructionsSpoken = false;
